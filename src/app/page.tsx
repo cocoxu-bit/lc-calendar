@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { OwnerFilter, FilterOwnerType } from '@/components/OwnerFilter';
 import { ViewSelector, CalendarViewMode } from '@/components/ViewSelector';
 import { AgendaList } from '@/components/AgendaList';
+import { HorizontalCalendarView } from '@/components/HorizontalCalendarView';
 import { EventSheet } from '@/components/EventSheet';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -26,6 +27,7 @@ import {
   getWeekDatesWindow,
   parseDateString,
 } from '@/lib/dateUtils';
+import { addDays } from 'date-fns';
 import {
   getStoredProfile,
   saveStoredProfile,
@@ -95,9 +97,9 @@ export default function Home() {
   }, [filteredEvents]);
 
   // Window of dates depending on current viewMode:
-  // - 'agenda': 14 days + any upcoming events
-  // - '3days': exactly 3 days starting from selectedDate
-  // - 'week': the 7 days of the current week anchor (Monday to Sunday)
+  // - 'agenda': starts strictly from today
+  // - '3days': exactly 3 horizontal day columns starting from selectedDate
+  // - 'week': the 7 horizontal day columns of the current week anchor (Monday to Sunday)
   const displayedDates = useMemo(() => {
     if (viewMode === '3days') {
       const anchor = parseDateString(selectedDate || todayStr);
@@ -175,9 +177,21 @@ export default function Home() {
     setSelectedDate(todayStr);
   };
 
+  const handleShiftRange = (direction: -1 | 1) => {
+    if (viewMode === '3days') {
+      const current = parseDateString(selectedDate || todayStr);
+      const nextDate = addDays(current, direction * 3);
+      setSelectedDate(toDateString(nextDate));
+    } else if (viewMode === 'week') {
+      const nextWeek = addDays(currentWeekAnchor, direction * 7);
+      setCurrentWeekAnchor(nextWeek);
+      setSelectedDate(toDateString(nextWeek));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-100 flex justify-center selection:bg-neutral-900 selection:text-white overflow-x-hidden">
-      {/* Mobile Frame Container (Strictly bounded, zero horizontal scroll) */}
+      {/* Mobile Frame Container (Strictly bounded, zero accidental horizontal scroll) */}
       <main className="w-full max-w-md min-h-screen bg-neutral-50 text-neutral-900 shadow-2xl relative flex flex-col font-sans border-x border-neutral-200/60 overflow-x-hidden box-border">
         {/* Header with week scrubber */}
         <Header
@@ -206,15 +220,28 @@ export default function Home() {
           counts={counts}
         />
 
-        {/* Continuous / 3-Day / Weekly Agenda View */}
-        <AgendaList
-          dates={displayedDates}
-          eventsByDate={eventsByDate}
-          profile={profile}
-          selectedDate={selectedDate}
-          onEventClick={handleEditEvent}
-          onQuickAddDate={(dateStr) => handleOpenCreateSheet(dateStr)}
-        />
+        {/* Dynamic View: Continuous Vertical Agenda OR Multi-Column Horizontal Views */}
+        {viewMode === 'agenda' ? (
+          <AgendaList
+            dates={displayedDates}
+            eventsByDate={eventsByDate}
+            profile={profile}
+            selectedDate={selectedDate}
+            onEventClick={handleEditEvent}
+            onQuickAddDate={(dateStr) => handleOpenCreateSheet(dateStr)}
+          />
+        ) : (
+          <HorizontalCalendarView
+            mode={viewMode}
+            dates={displayedDates}
+            eventsByDate={eventsByDate}
+            profile={profile}
+            selectedDate={selectedDate}
+            onEventClick={handleEditEvent}
+            onQuickAddDate={(dateStr) => handleOpenCreateSheet(dateStr)}
+            onShiftRange={handleShiftRange}
+          />
+        )}
 
         {/* Floating Action Button (+) */}
         <FloatingActionButton onClick={() => handleOpenCreateSheet()} />
