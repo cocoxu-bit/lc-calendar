@@ -6,6 +6,7 @@ import {
   ColorThemeKey,
   CustomCategory,
   QuickShortcut,
+  EventOwner,
   DEFAULT_CATEGORIES,
   DEFAULT_SHORTCUTS,
 } from '@/types/calendar';
@@ -24,6 +25,8 @@ import {
   Plus,
   Trash2,
   Edit2,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { getInitialSampleEvents } from '@/lib/eventsService';
 
@@ -74,8 +77,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newScTitle, setNewScTitle] = useState('');
   const [newScIcon, setNewScIcon] = useState('Sparkles');
   const [newScCat, setNewScCat] = useState(categories[0]?.id || 'general');
+  const [newScOwner, setNewScOwner] = useState<EventOwner | 'none'>('none');
   const [newScStart, setNewScStart] = useState('10:00');
   const [newScEnd, setNewScEnd] = useState('11:00');
+  const [newScAllDay, setNewScAllDay] = useState(false);
 
   const [isSaved, setIsSaved] = useState(false);
 
@@ -98,6 +103,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setTimeout(() => {
       setIsSaved(false);
     }, 1500);
+  };
+
+  // Reordering functions
+  const moveCategoryUp = (index: number) => {
+    if (index <= 0) return;
+    const updated = [...categories];
+    const temp = updated[index - 1];
+    updated[index - 1] = updated[index];
+    updated[index] = temp;
+    setCategories(updated);
+    handleSaveAll({ categories: updated });
+  };
+
+  const moveCategoryDown = (index: number) => {
+    if (index >= categories.length - 1) return;
+    const updated = [...categories];
+    const temp = updated[index + 1];
+    updated[index + 1] = updated[index];
+    updated[index] = temp;
+    setCategories(updated);
+    handleSaveAll({ categories: updated });
+  };
+
+  const moveShortcutUp = (index: number) => {
+    if (index <= 0) return;
+    const updated = [...shortcuts];
+    const temp = updated[index - 1];
+    updated[index - 1] = updated[index];
+    updated[index] = temp;
+    setShortcuts(updated);
+    handleSaveAll({ shortcuts: updated });
+  };
+
+  const moveShortcutDown = (index: number) => {
+    if (index >= shortcuts.length - 1) return;
+    const updated = [...shortcuts];
+    const temp = updated[index + 1];
+    updated[index + 1] = updated[index];
+    updated[index] = temp;
+    setShortcuts(updated);
+    handleSaveAll({ shortcuts: updated });
   };
 
   // Category Actions
@@ -156,9 +202,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       title: newScTitle.trim() || newScLabel.trim(),
       iconName: newScIcon,
       category: newScCat,
-      defaultStartTime: newScStart,
-      defaultEndTime: newScEnd,
-      isAllDay: false,
+      defaultOwner: newScOwner === 'none' ? undefined : newScOwner,
+      defaultStartTime: newScAllDay ? undefined : newScStart,
+      defaultEndTime: newScAllDay ? undefined : newScEnd,
+      isAllDay: newScAllDay,
       enabled: true,
       isCustom: true,
     };
@@ -237,7 +284,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <h2 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight">
                 Personalización Total
               </h2>
-              <p className="text-[11px] text-neutral-500">Colores, categorías y atajos a vuestro gusto</p>
+              <p className="text-[11px] text-neutral-500">Colores, categorías y orden a vuestro gusto</p>
             </div>
           </div>
 
@@ -457,18 +504,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: CATEGORÍAS */}
+          {/* TAB 2: CATEGORÍAS (CON REORDENACIÓN Y CRUD) */}
           {activeTab === 'categories' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-neutral-800 text-xs">
-                  Categorías ({categories.length})
-                </span>
+                <div>
+                  <span className="font-bold text-neutral-800 text-xs block">
+                    Categorías ({categories.length})
+                  </span>
+                  <span className="text-[10px] text-neutral-500">
+                    Usa las flechas ⬆️ ⬇️ para definir el orden en la app
+                  </span>
+                </div>
                 {!isAddingCategory && !editingCategory && (
                   <button
                     type="button"
                     onClick={() => setIsAddingCategory(true)}
-                    className="px-2.5 py-1 rounded-xl bg-neutral-900 text-white font-semibold text-[11px] hover:bg-neutral-800 transition flex items-center gap-1 shadow-2xs"
+                    className="px-2.5 py-1 rounded-xl bg-neutral-900 text-white font-semibold text-[11px] hover:bg-neutral-800 transition flex items-center gap-1 shadow-2xs shrink-0"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Nueva</span>
@@ -621,19 +673,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
 
-              {/* List of categories */}
+              {/* List of categories with reorder arrows */}
               <div className="space-y-1.5">
-                {categories.map((cat) => {
+                {categories.map((cat, index) => {
                   const catTheme = getColorTheme(cat.colorTheme);
                   return (
                     <div
                       key={cat.id}
                       className="flex items-center justify-between p-2.5 rounded-xl border border-neutral-200/80 bg-white shadow-2xs hover:border-neutral-300 transition"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`p-1.5 rounded-lg border ${catTheme.badgeBg}`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {/* Reorder arrows */}
+                        <div className="flex flex-col shrink-0">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => moveCategoryUp(index)}
+                            aria-label="Subir categoría"
+                            className="p-0.5 text-neutral-400 hover:text-neutral-900 disabled:opacity-20 transition"
+                          >
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === categories.length - 1}
+                            onClick={() => moveCategoryDown(index)}
+                            aria-label="Bajar categoría"
+                            className="p-0.5 text-neutral-400 hover:text-neutral-900 disabled:opacity-20 transition"
+                          >
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        <span className={`p-1.5 rounded-lg border shrink-0 ${catTheme.badgeBg}`}>
                           <DynamicIcon name={cat.iconName} className="w-3.5 h-3.5" />
                         </span>
+
                         <div className="min-w-0">
                           <span className="font-semibold text-neutral-900 block truncate">{cat.label}</span>
                           <span className="text-[10px] text-neutral-400 capitalize">{catTheme.label}</span>
@@ -670,7 +745,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: ATAJOS RÁPIDOS */}
+          {/* TAB 3: ATAJOS RÁPIDOS (CON REORDENACIÓN Y CREACIÓN GENERAL) */}
           {activeTab === 'shortcuts' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -679,7 +754,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     Atajos Rápidos ({shortcuts.filter((s) => s.enabled).length} activos)
                   </span>
                   <span className="text-[10px] text-neutral-500">
-                    Aparecen en el modal de nuevo evento para agendar en 1 toque
+                    Reordena con ⬆️ ⬇️ cómo quieres que aparezcan al pulsar (+)
                   </span>
                 </div>
                 {!isAddingShortcut && !editingShortcut && (
@@ -694,23 +769,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
               </div>
 
-              {/* Form to Add New Shortcut */}
+              {/* Form to Add New General Shortcut */}
               {isAddingShortcut && (
                 <form
                   onSubmit={handleSaveNewShortcut}
                   className="p-3 rounded-2xl border-2 border-neutral-900 bg-neutral-50 space-y-2.5"
                 >
-                  <span className="font-bold text-neutral-900 text-xs block">Crear Nuevo Atajo Rápido</span>
+                  <span className="font-bold text-neutral-900 text-xs block">
+                    Crear Nuevo Atajo Rápido (Deporte, Ocio, Casa, Peque...)
+                  </span>
+
                   <div>
                     <label className="block text-[10px] font-semibold text-neutral-600 mb-1">
-                      Nombre en botón (corto)
+                      Texto en el botón (corto) *
                     </label>
                     <input
                       type="text"
                       required
                       value={newScLabel}
                       onChange={(e) => setNewScLabel(e.target.value)}
-                      placeholder="Ej. Pádel, Paseo perro..."
+                      placeholder="Ej. Pádel, Compra, Cena, Baño..."
                       className="w-full px-3 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-900 text-xs font-medium"
                       autoFocus
                     />
@@ -718,7 +796,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <div>
                     <label className="block text-[10px] font-semibold text-neutral-600 mb-1">
-                      Título que generará el evento
+                      Título que generará en el calendario
                     </label>
                     <input
                       type="text"
@@ -729,25 +807,85 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-neutral-600 mb-1">Hora Inicio</label>
+                  {/* Owner default selection */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-neutral-600 mb-1">
+                      ¿A quién asignar por defecto?
+                    </label>
+                    <div className="grid grid-cols-4 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setNewScOwner('none')}
+                        className={`py-1 px-1 rounded-lg border text-[10px] font-semibold ${
+                          newScOwner === 'none' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-700'
+                        }`}
+                      >
+                        Preguntar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewScOwner('user_1')}
+                        className={`py-1 px-1 rounded-lg border text-[10px] font-semibold truncate ${
+                          newScOwner === 'user_1' ? 'bg-sky-500 text-white' : 'bg-white text-neutral-700'
+                        }`}
+                      >
+                        {user1Name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewScOwner('user_2')}
+                        className={`py-1 px-1 rounded-lg border text-[10px] font-semibold truncate ${
+                          newScOwner === 'user_2' ? 'bg-rose-500 text-white' : 'bg-white text-neutral-700'
+                        }`}
+                      >
+                        {user2Name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewScOwner('both')}
+                        className={`py-1 px-1 rounded-lg border text-[10px] font-semibold ${
+                          newScOwner === 'both' ? 'bg-purple-500 text-white' : 'bg-white text-neutral-700'
+                        }`}
+                      >
+                        Juntos
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* All-Day toggle or Time Picker */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-semibold text-neutral-600">¿Es evento de todo el día?</label>
                       <input
-                        type="time"
-                        value={newScStart}
-                        onChange={(e) => setNewScStart(e.target.value)}
-                        className="w-full px-2 py-1 rounded-lg bg-white border border-neutral-200 text-xs"
+                        type="checkbox"
+                        checked={newScAllDay}
+                        onChange={(e) => setNewScAllDay(e.target.checked)}
+                        className="rounded"
                       />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-neutral-600 mb-1">Hora Fin</label>
-                      <input
-                        type="time"
-                        value={newScEnd}
-                        onChange={(e) => setNewScEnd(e.target.value)}
-                        className="w-full px-2 py-1 rounded-lg bg-white border border-neutral-200 text-xs"
-                      />
-                    </div>
+
+                    {!newScAllDay && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-neutral-600 mb-0.5">Hora Inicio</label>
+                          <input
+                            type="time"
+                            value={newScStart}
+                            onChange={(e) => setNewScStart(e.target.value)}
+                            className="w-full px-2 py-1 rounded-lg bg-white border border-neutral-200 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-neutral-600 mb-0.5">Hora Fin</label>
+                          <input
+                            type="time"
+                            value={newScEnd}
+                            onChange={(e) => setNewScEnd(e.target.value)}
+                            className="w-full px-2 py-1 rounded-lg bg-white border border-neutral-200 text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Icon Selector */}
@@ -867,9 +1005,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
 
-              {/* List of shortcuts */}
+              {/* List of shortcuts with reordering buttons */}
               <div className="space-y-1.5">
-                {shortcuts.map((sc) => (
+                {shortcuts.map((sc, index) => (
                   <div
                     key={sc.id}
                     className={`flex items-center justify-between p-2.5 rounded-xl border transition ${
@@ -878,7 +1016,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         : 'border-neutral-200/50 bg-neutral-100/50 opacity-60'
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {/* Reorder arrows */}
+                      <div className="flex flex-col shrink-0">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => moveShortcutUp(index)}
+                          aria-label="Subir atajo"
+                          className="p-0.5 text-neutral-400 hover:text-neutral-900 disabled:opacity-20 transition"
+                        >
+                          <ChevronUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === shortcuts.length - 1}
+                          onClick={() => moveShortcutDown(index)}
+                          aria-label="Bajar atajo"
+                          className="p-0.5 text-neutral-400 hover:text-neutral-900 disabled:opacity-20 transition"
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      </div>
+
                       <button
                         type="button"
                         onClick={() => handleToggleShortcut(sc.id)}
