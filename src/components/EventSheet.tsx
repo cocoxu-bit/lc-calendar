@@ -4,26 +4,13 @@ import React, { useState, useEffect } from 'react';
 import {
   CalendarEvent,
   EventOwner,
-  EventCategory,
   BabyTaskType,
   CoupleProfile,
-  CATEGORY_CONFIG,
+  QuickShortcut,
 } from '@/types/calendar';
-import {
-  X,
-  Calendar,
-  Trash2,
-  Check,
-  Package,
-  Activity,
-  Coffee,
-  HeartPulse,
-  Baby,
-  Moon,
-  Utensils,
-  Bath,
-  Sparkles,
-} from 'lucide-react';
+import { getColorTheme } from '@/lib/colors';
+import { DynamicIcon } from '@/components/DynamicIcon';
+import { X, Trash2, Check, Sparkles } from 'lucide-react';
 
 interface EventSheetProps {
   isOpen: boolean;
@@ -34,24 +21,6 @@ interface EventSheetProps {
   initialDate?: string;
   profile: CoupleProfile;
 }
-
-const CategoryIcon = ({ iconName, className }: { iconName: string; className?: string }) => {
-  switch (iconName) {
-    case 'Baby':
-      return <Baby className={className} />;
-    case 'Package':
-      return <Package className={className} />;
-    case 'Activity':
-      return <Activity className={className} />;
-    case 'Coffee':
-      return <Coffee className={className} />;
-    case 'HeartPulse':
-      return <HeartPulse className={className} />;
-    case 'Calendar':
-    default:
-      return <Calendar className={className} />;
-  }
-};
 
 export const EventSheet: React.FC<EventSheetProps> = ({
   isOpen,
@@ -65,7 +34,7 @@ export const EventSheet: React.FC<EventSheetProps> = ({
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(initialDate || new Date().toISOString().slice(0, 10));
   const [owner, setOwner] = useState<EventOwner>('both');
-  const [category, setCategory] = useState<EventCategory>('general');
+  const [category, setCategory] = useState<string>('general');
   const [babyTaskType, setBabyTaskType] = useState<BabyTaskType | undefined>(undefined);
   const [isAllDay, setIsAllDay] = useState(false);
   const [startTime, setStartTime] = useState('10:00');
@@ -81,7 +50,7 @@ export const EventSheet: React.FC<EventSheetProps> = ({
         setTitle(editingEvent.title);
         setDate(editingEvent.date);
         setOwner(editingEvent.owner);
-        setCategory(editingEvent.category);
+        setCategory(editingEvent.category || 'general');
         setBabyTaskType(editingEvent.babyTaskType);
         setIsAllDay(editingEvent.isAllDay);
         setStartTime(editingEvent.startTime || '10:00');
@@ -90,25 +59,28 @@ export const EventSheet: React.FC<EventSheetProps> = ({
         setTitle('');
         setDate(initialDate || new Date().toISOString().slice(0, 10));
         setOwner('both');
-        setCategory('general');
+        setCategory(profile.categories?.[0]?.id || 'general');
         setBabyTaskType(undefined);
         setIsAllDay(false);
         setStartTime('10:00');
         setEndTime('11:00');
       }
     }
-  }, [isOpen, editingEvent, initialDate]);
+  }, [isOpen, editingEvent, initialDate, profile]);
 
   if (!isOpen) return null;
 
-  // Quick preset template for baby routines
-  const applyBabyPreset = (type: BabyTaskType, defaultTitle: string, defaultStart: string, defaultEnd: string) => {
-    setTitle(defaultTitle);
-    setCategory('bebe');
-    setBabyTaskType(type);
-    setIsAllDay(false);
-    setStartTime(defaultStart);
-    setEndTime(defaultEnd);
+  // Active shortcuts configured in profile (no horizontal scroll, rendered as a 2-column grid)
+  const activeShortcuts = (profile.shortcuts || []).filter((s) => s.enabled);
+
+  const applyShortcut = (shortcut: QuickShortcut) => {
+    setTitle(shortcut.title);
+    setCategory(shortcut.category);
+    setBabyTaskType(shortcut.babyTaskType);
+    setIsAllDay(Boolean(shortcut.isAllDay));
+    if (shortcut.defaultStartTime) setStartTime(shortcut.defaultStartTime);
+    if (shortcut.defaultEndTime) setEndTime(shortcut.defaultEndTime);
+    if (shortcut.defaultOwner) setOwner(shortcut.defaultOwner);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,7 +95,7 @@ export const EventSheet: React.FC<EventSheetProps> = ({
           date,
           owner,
           category,
-          babyTaskType: category === 'bebe' ? babyTaskType : undefined,
+          babyTaskType,
           isAllDay,
           startTime: isAllDay ? undefined : startTime,
           endTime: isAllDay ? undefined : endTime,
@@ -151,10 +123,12 @@ export const EventSheet: React.FC<EventSheetProps> = ({
     }
   };
 
-  const categories: EventCategory[] = ['bebe', 'general', 'logistica', 'ocio', 'salud', 'deporte'];
+  const user1Theme = getColorTheme(profile.user1Color);
+  const user2Theme = getColorTheme(profile.user2Color);
+  const bothTheme = getColorTheme(profile.bothColor);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-200"
@@ -162,7 +136,7 @@ export const EventSheet: React.FC<EventSheetProps> = ({
       />
 
       {/* Sheet Content Container (Mobile-bound) */}
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl shadow-2xl border-t border-neutral-200/80 z-10 max-h-[92vh] flex flex-col animate-in slide-in-from-bottom duration-250 ease-out">
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl shadow-2xl border-t border-neutral-200/80 z-10 max-h-[92vh] flex flex-col animate-in slide-in-from-bottom duration-250 ease-out box-border overflow-hidden">
         {/* Drag handle bar */}
         <div className="w-full flex items-center justify-center pt-3 pb-1">
           <div className="w-12 h-1.5 rounded-full bg-neutral-300/90" />
@@ -171,66 +145,45 @@ export const EventSheet: React.FC<EventSheetProps> = ({
         {/* Header */}
         <div className="px-5 py-3 flex items-center justify-between border-b border-neutral-100">
           <div>
-            <h2 className="text-lg font-bold text-neutral-900">
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 leading-tight">
               {editingEvent ? 'Editar Evento' : 'Nuevo Evento'}
             </h2>
-            <p className="text-xs text-neutral-500">Coordina planes, pareja y cuidados del bebé</p>
+            <p className="text-xs text-neutral-500">Coordina planes, pareja y familia</p>
           </div>
           <button
             onClick={onClose}
             aria-label="Cerrar modal"
-            className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition"
+            className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Quick Baby Templates (Atajos rápidos de 1 toque) */}
-        {!editingEvent && (
-          <div className="px-5 pt-3 pb-1 bg-amber-50/40 border-b border-amber-100/60">
-            <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1 mb-2">
-              <Sparkles className="w-3 h-3 text-amber-600" />
-              Atajos rápidos para el peque:
+        {/* Quick Shortcuts (Atajos configurables - Cuadrícula de 2 columnas sin scroll horizontal) */}
+        {!editingEvent && activeShortcuts.length > 0 && (
+          <div className="px-4 py-3 bg-neutral-50/80 border-b border-neutral-100 box-border">
+            <span className="text-[11px] font-bold text-neutral-700 flex items-center gap-1 mb-2">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              Atajos rápidos:
             </span>
-            <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-none">
-              <button
-                type="button"
-                onClick={() => applyBabyPreset('noche', `Turno de noche con ${profile.childName || 'el peque'} 🌙`, '23:30', '07:30')}
-                className="shrink-0 px-2.5 py-1.5 rounded-xl bg-white border border-indigo-200 text-indigo-950 text-xs font-semibold hover:bg-indigo-50 transition flex items-center gap-1 shadow-2xs"
-              >
-                <Moon className="w-3 h-3 text-indigo-600" />
-                <span>Turno noche</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => applyBabyPreset('comida', `Dar de comer / Biberón 🍼`, '13:00', '14:00')}
-                className="shrink-0 px-2.5 py-1.5 rounded-xl bg-white border border-amber-200 text-amber-950 text-xs font-semibold hover:bg-amber-50 transition flex items-center gap-1 shadow-2xs"
-              >
-                <Utensils className="w-3 h-3 text-amber-600" />
-                <span>Comida / Biberón</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => applyBabyPreset('bano', `Baño y rutina de dormir 🛁`, '20:00', '20:45')}
-                className="shrink-0 px-2.5 py-1.5 rounded-xl bg-white border border-cyan-200 text-cyan-950 text-xs font-semibold hover:bg-cyan-50 transition flex items-center gap-1 shadow-2xs"
-              >
-                <Bath className="w-3 h-3 text-cyan-600" />
-                <span>Baño</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => applyBabyPreset('guarderia', `Llevar a la guardería 🎒`, '09:00', '09:30')}
-                className="shrink-0 px-2.5 py-1.5 rounded-xl bg-white border border-teal-200 text-teal-950 text-xs font-semibold hover:bg-teal-50 transition flex items-center gap-1 shadow-2xs"
-              >
-                <Package className="w-3 h-3 text-teal-600" />
-                <span>Guardería</span>
-              </button>
+            <div className="grid grid-cols-2 gap-2 w-full">
+              {activeShortcuts.map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => applyShortcut(sc)}
+                  className="px-2.5 py-1.5 rounded-xl bg-white border border-neutral-200 hover:border-neutral-400 text-neutral-800 text-xs font-semibold hover:bg-neutral-100/70 transition flex items-center gap-1.5 shadow-2xs text-left min-w-0"
+                >
+                  <DynamicIcon name={sc.iconName} className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+                  <span className="truncate">{sc.label}</span>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-sm">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-4 text-sm box-border">
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1.5">
@@ -241,64 +194,64 @@ export const EventSheet: React.FC<EventSheetProps> = ({
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej. Turno de noche, Cena, Pádel, Vacunas..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:bg-white transition"
+              placeholder="Ej. Turno de noche, Cena, Pádel, Compra..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:bg-white transition box-border"
               autoFocus
             />
           </div>
 
-          {/* Propietario (Owner) Selection */}
+          {/* Propietario (Owner) Selection with Dynamic Colors */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1.5">
-              ¿Quién se encarga?
+              ¿A quién corresponde?
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 w-full min-w-0">
               {/* Persona 1 */}
               <button
                 type="button"
                 onClick={() => setOwner('user_1')}
-                className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl border text-xs font-semibold transition-all min-w-0 ${
                   owner === 'user_1'
-                    ? 'bg-sky-50 border-sky-400 text-sky-950 ring-2 ring-sky-300/50 shadow-xs'
+                    ? `${user1Theme.cardBg} ring-2 ring-neutral-900/10 shadow-xs font-bold`
                     : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100'
                 }`}
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-500 mb-1" />
-                <span className="truncate max-w-full">{profile.user1Name}</span>
+                <span className={`w-2.5 h-2.5 rounded-full ${user1Theme.indicator} mb-1`} />
+                <span className="truncate w-full text-center">{profile.user1Name}</span>
               </button>
 
               {/* Persona 2 */}
               <button
                 type="button"
                 onClick={() => setOwner('user_2')}
-                className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl border text-xs font-semibold transition-all min-w-0 ${
                   owner === 'user_2'
-                    ? 'bg-rose-50 border-rose-400 text-rose-950 ring-2 ring-rose-300/50 shadow-xs'
+                    ? `${user2Theme.cardBg} ring-2 ring-neutral-900/10 shadow-xs font-bold`
                     : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100'
                 }`}
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mb-1" />
-                <span className="truncate max-w-full">{profile.user2Name}</span>
+                <span className={`w-2.5 h-2.5 rounded-full ${user2Theme.indicator} mb-1`} />
+                <span className="truncate w-full text-center">{profile.user2Name}</span>
               </button>
 
               {/* Ambos */}
               <button
                 type="button"
                 onClick={() => setOwner('both')}
-                className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl border text-xs font-semibold transition-all min-w-0 ${
                   owner === 'both'
-                    ? 'bg-purple-50 border-purple-400 text-purple-950 ring-2 ring-purple-300/50 shadow-xs'
+                    ? `${bothTheme.cardBg} ring-2 ring-neutral-900/10 shadow-xs font-bold`
                     : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100'
                 }`}
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 mb-1" />
-                <span>Juntos</span>
+                <span className={`w-2.5 h-2.5 rounded-full ${bothTheme.indicator} mb-1`} />
+                <span className="truncate w-full text-center">Juntos</span>
               </button>
             </div>
           </div>
 
           {/* Date & All-Day Toggle */}
-          <div className="grid grid-cols-2 gap-3 items-end">
+          <div className="grid grid-cols-2 gap-2.5 items-end w-full">
             <div>
               <label className="block text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1.5">
                 Fecha
@@ -308,12 +261,12 @@ export const EventSheet: React.FC<EventSheetProps> = ({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 font-medium focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:bg-white transition text-xs"
+                className="w-full px-2.5 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-900 font-medium focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:bg-white transition text-xs box-border"
               />
             </div>
 
-            <div className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 border border-neutral-200 h-[38px]">
-              <span className="text-xs font-medium text-neutral-700">Todo el día</span>
+            <div className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 border border-neutral-200 h-[38px] box-border">
+              <span className="text-xs font-medium text-neutral-700 truncate mr-1">Todo el día</span>
               <button
                 type="button"
                 onClick={() => setIsAllDay(!isAllDay)}
@@ -332,7 +285,7 @@ export const EventSheet: React.FC<EventSheetProps> = ({
 
           {/* Time Picker (Shown only if not all-day) */}
           {!isAllDay && (
-            <div className="grid grid-cols-2 gap-3 p-3 bg-neutral-50/80 rounded-2xl border border-neutral-200/80">
+            <div className="grid grid-cols-2 gap-2.5 p-3 bg-neutral-50/80 rounded-2xl border border-neutral-200/80 box-border w-full">
               <div>
                 <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
                   Hora Inicio
@@ -342,48 +295,48 @@ export const EventSheet: React.FC<EventSheetProps> = ({
                   required
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                  className="w-full px-2 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900 box-border"
                 />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
-                  Hora Fin (opcional)
+                  Hora Fin
                 </label>
                 <input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                  className="w-full px-2 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900 box-border"
                 />
               </div>
             </div>
           )}
 
-          {/* Category Selection */}
+          {/* Category Selection (Wrap cleanly without horizontal scroll) */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1.5">
               Categoría
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {categories.map((catKey) => {
-                const meta = CATEGORY_CONFIG[catKey];
-                const isSelected = category === catKey;
+            <div className="flex flex-wrap gap-1.5 w-full">
+              {(profile.categories || []).map((cat) => {
+                const isSelected = category === cat.id;
+                const catTheme = getColorTheme(cat.colorTheme);
                 return (
                   <button
-                    key={catKey}
+                    key={cat.id}
                     type="button"
                     onClick={() => {
-                      setCategory(catKey);
-                      if (catKey !== 'bebe') setBabyTaskType(undefined);
+                      setCategory(cat.id);
+                      if (cat.id !== 'bebe') setBabyTaskType(undefined);
                     }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                       isSelected
-                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
-                        : 'bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50'
+                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs font-bold'
+                        : `bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50 ${catTheme.text}`
                     }`}
                   >
-                    <CategoryIcon iconName={meta.iconName} className="w-3.5 h-3.5" />
-                    <span>{meta.label}</span>
+                    <DynamicIcon name={cat.iconName} className="w-3.5 h-3.5" />
+                    <span>{cat.label}</span>
                   </button>
                 );
               })}

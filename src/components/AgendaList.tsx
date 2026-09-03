@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { CalendarEvent, CoupleProfile } from '@/types/calendar';
 import { EventCard } from './EventCard';
 import { formatAgendaHeader } from '@/lib/dateUtils';
+import { getColorTheme } from '@/lib/colors';
 import { Sparkles, Plus, CalendarHeart, Moon } from 'lucide-react';
 
 interface AgendaListProps {
@@ -36,7 +37,7 @@ export const AgendaList: React.FC<AgendaListProps> = ({
   }, [selectedDate]);
 
   return (
-    <div className="flex-1 px-4 py-4 space-y-6 pb-28">
+    <div className="flex-1 px-3 sm:px-4 py-4 space-y-5 pb-28 w-full box-border overflow-hidden">
       {dates.map((dateStr) => {
         const events = eventsByDate[dateStr] || [];
         const headerInfo = formatAgendaHeader(dateStr);
@@ -54,22 +55,30 @@ export const AgendaList: React.FC<AgendaListProps> = ({
             : 'Juntos'
           : null;
 
+        const nightOwnerTheme = nightEvent
+          ? nightEvent.owner === 'user_1'
+            ? getColorTheme(profile.user1Color)
+            : nightEvent.owner === 'user_2'
+            ? getColorTheme(profile.user2Color)
+            : getColorTheme(profile.bothColor)
+          : null;
+
         return (
           <section
             key={dateStr}
             ref={(el) => {
               dayRefs.current[dateStr] = el;
             }}
-            className={`scroll-mt-40 transition-all duration-300 ${
+            className={`scroll-mt-40 transition-all duration-300 w-full box-border ${
               isTargetDay ? 'ring-2 ring-neutral-900/10 rounded-3xl p-1 bg-white/40' : ''
             }`}
           >
             {/* Day Header */}
-            <div className="flex items-center justify-between py-1.5 px-1 mb-2.5">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center justify-between py-1.5 px-1 mb-2 gap-2 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
                 {headerInfo.relative ? (
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold tracking-tight shadow-2xs ${
+                    className={`px-2 py-0.5 rounded-full text-xs font-bold tracking-tight shadow-2xs shrink-0 ${
                       headerInfo.isCurrentDay
                         ? 'bg-neutral-900 text-white'
                         : 'bg-neutral-200/90 text-neutral-800'
@@ -79,21 +88,15 @@ export const AgendaList: React.FC<AgendaListProps> = ({
                   </span>
                 ) : null}
 
-                <h2 className="text-sm font-semibold text-neutral-900">
+                <h2 className="text-xs sm:text-sm font-semibold text-neutral-900 leading-snug">
                   <span className="capitalize">{headerInfo.dayName}</span>,{' '}
                   <span className="font-normal text-neutral-600">{headerInfo.formattedDate}</span>
                 </h2>
 
                 {/* Night duty badge in day header */}
-                {nightOwnerName && (
+                {nightOwnerName && nightOwnerTheme && (
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border shadow-2xs ${
-                      nightEvent?.owner === 'user_1'
-                        ? 'bg-sky-100 text-sky-900 border-sky-300'
-                        : nightEvent?.owner === 'user_2'
-                        ? 'bg-rose-100 text-rose-900 border-rose-300'
-                        : 'bg-purple-100 text-purple-900 border-purple-300'
-                    }`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border shadow-2xs shrink-0 ${nightOwnerTheme.badgeBg}`}
                   >
                     <Moon className="w-3 h-3" />
                     <span>Noche: {nightOwnerName}</span>
@@ -113,7 +116,7 @@ export const AgendaList: React.FC<AgendaListProps> = ({
 
             {/* Events or "Día despejado" */}
             {events.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 w-full">
                 {events.map((event) => (
                   <EventCard
                     key={event.id || `${event.date}-${event.title}`}
@@ -128,11 +131,11 @@ export const AgendaList: React.FC<AgendaListProps> = ({
                 onClick={() => onQuickAddDate(dateStr)}
                 role="button"
                 tabIndex={0}
-                className="group flex items-center justify-between px-4 py-3 rounded-2xl border border-dashed border-neutral-200/90 bg-neutral-50/50 hover:bg-neutral-100/60 hover:border-neutral-300/80 transition-all cursor-pointer"
+                className="group flex items-center justify-between px-3.5 py-2.5 rounded-2xl border border-dashed border-neutral-200/90 bg-neutral-50/50 hover:bg-neutral-100/60 hover:border-neutral-300/80 transition-all cursor-pointer w-full box-border"
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 group-hover:text-amber-500 group-hover:bg-amber-50 transition">
-                    <Sparkles className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 group-hover:text-amber-500 group-hover:bg-amber-50 transition">
+                    <Sparkles className="w-3 h-3" />
                   </div>
                   <span className="text-xs font-medium text-neutral-400 group-hover:text-neutral-600 transition">
                     Día despejado
@@ -149,9 +152,9 @@ export const AgendaList: React.FC<AgendaListProps> = ({
 
       {/* Footer subtle tip */}
       <div className="pt-4 text-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 text-[11px] text-neutral-500 font-medium">
-          <CalendarHeart className="w-3.5 h-3.5 text-rose-500" />
-          <span>Sincronizado para Lucas, Josefina &amp; {profile.childName || 'Peque'}</span>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 text-[11px] text-neutral-500 font-medium max-w-full">
+          <CalendarHeart className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+          <span className="truncate">{profile.user1Name}, {profile.user2Name} &amp; {profile.childName || 'Peque'}</span>
         </div>
       </div>
     </div>

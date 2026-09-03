@@ -19,6 +19,15 @@ export function toDateString(d: Date): string {
   return format(d, 'yyyy-MM-dd');
 }
 
+// Parse string YYYY-MM-DD to local Date object
+export function parseDateString(str: string): Date {
+  try {
+    return parseISO(str);
+  } catch {
+    return new Date();
+  }
+}
+
 // Format friendly header for agenda: e.g. "Hoy · Jueves, 3 de Septiembre"
 export function formatAgendaHeader(dateStr: string): {
   relative: string | null;
@@ -26,7 +35,7 @@ export function formatAgendaHeader(dateStr: string): {
   formattedDate: string;
   isCurrentDay: boolean;
 } {
-  const date = parseISO(dateStr);
+  const date = parseDateString(dateStr);
   const current = isToday(date);
   let relative: string | null = null;
 
@@ -68,12 +77,26 @@ export function getWeekDays(anchorDate: Date = new Date()) {
 // Generate continuous dates for the agenda view (e.g. from 1 day before to 14 days ahead)
 export function getAgendaDatesWindow(anchorDate: Date = new Date(), daysCount: number = 14): string[] {
   const dates: string[] = [];
-  // Start from today - 1 day so user can also see yesterday if needed, or start from today
   const start = addDays(anchorDate, -1);
   for (let i = 0; i < daysCount; i++) {
     dates.push(toDateString(addDays(start, i)));
   }
   return dates;
+}
+
+// Generate 3 days window (e.g. selectedDate, +1 day, +2 days)
+export function getThreeDaysDates(anchorDate: Date = new Date()): string[] {
+  return [
+    toDateString(anchorDate),
+    toDateString(addDays(anchorDate, 1)),
+    toDateString(addDays(anchorDate, 2)),
+  ];
+}
+
+// Generate week dates (Lunes a Domingo)
+export function getWeekDatesWindow(anchorDate: Date = new Date()): string[] {
+  const weekStart = startOfWeek(anchorDate, { weekStartsOn: 1 });
+  return Array.from({ length: 7 }, (_, i) => toDateString(addDays(weekStart, i)));
 }
 
 // Format month & year for main header, e.g. "Septiembre 2026"
