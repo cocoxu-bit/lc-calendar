@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CoupleProfile,
   ColorThemeKey,
@@ -51,10 +51,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Profile fields
   const [user1Name, setUser1Name] = useState(profile.user1Name);
-  const [user1Color, setUser1Color] = useState<ColorThemeKey>(profile.user1Color);
+  const [user1Color, setUser1Color] = useState<ColorThemeKey>(profile.user1Color || 'sky');
   const [user2Name, setUser2Name] = useState(profile.user2Name);
-  const [user2Color, setUser2Color] = useState<ColorThemeKey>(profile.user2Color);
-  const [bothColor, setBothColor] = useState<ColorThemeKey>(profile.bothColor);
+  const [user2Color, setUser2Color] = useState<ColorThemeKey>(profile.user2Color || 'rose');
+  const [bothColor, setBothColor] = useState<ColorThemeKey>(profile.bothColor || 'purple');
   const [childName, setChildName] = useState(profile.childName || 'Peque');
 
   // Categories state
@@ -82,11 +82,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newScEnd, setNewScEnd] = useState('11:00');
   const [newScAllDay, setNewScAllDay] = useState(false);
 
-  const [isSaved, setIsSaved] = useState(false);
+  const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
+
+  // Sync state whenever modal is opened or profile updates
+  useEffect(() => {
+    if (isOpen) {
+      setUser1Name(profile.user1Name);
+      setUser1Color(profile.user1Color || 'sky');
+      setUser2Name(profile.user2Name);
+      setUser2Color(profile.user2Color || 'rose');
+      setBothColor(profile.bothColor || 'purple');
+      setChildName(profile.childName || 'Peque');
+      setCategories(
+        profile.categories && profile.categories.length > 0 ? profile.categories : DEFAULT_CATEGORIES
+      );
+      setShortcuts(
+        profile.shortcuts && profile.shortcuts.length > 0 ? profile.shortcuts : DEFAULT_SHORTCUTS
+      );
+    }
+  }, [isOpen, profile]);
 
   if (!isOpen) return null;
 
-  const handleSaveAll = (overrideProfile?: Partial<CoupleProfile>) => {
+  const showSavedFeedback = (msg: string) => {
+    setSavedFeedback(msg);
+    setTimeout(() => {
+      setSavedFeedback(null);
+    }, 1800);
+  };
+
+  const handleSaveAll = (overrideProfile?: Partial<CoupleProfile>, feedbackMsg: string = 'Guardado') => {
     const updated: CoupleProfile = {
       user1Name: user1Name.trim() || 'Lucas',
       user1Color,
@@ -99,10 +124,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ...overrideProfile,
     };
     onSaveProfile(updated);
-    setIsSaved(true);
-    setTimeout(() => {
-      setIsSaved(false);
-    }, 1500);
+    showSavedFeedback(feedbackMsg);
+  };
+
+  // Instant Color Pickers
+  const handleSelectUser1Color = (key: ColorThemeKey) => {
+    setUser1Color(key);
+    handleSaveAll({ user1Color: key }, `Color de ${user1Name} actualizado`);
+  };
+
+  const handleSelectUser2Color = (key: ColorThemeKey) => {
+    setUser2Color(key);
+    handleSaveAll({ user2Color: key }, `Color de ${user2Name} actualizado`);
+  };
+
+  const handleSelectBothColor = (key: ColorThemeKey) => {
+    setBothColor(key);
+    handleSaveAll({ bothColor: key }, 'Color de Juntos actualizado');
   };
 
   // Reordering functions
@@ -113,7 +151,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     updated[index - 1] = updated[index];
     updated[index] = temp;
     setCategories(updated);
-    handleSaveAll({ categories: updated });
+    handleSaveAll({ categories: updated }, 'Orden de categorías actualizado');
   };
 
   const moveCategoryDown = (index: number) => {
@@ -123,7 +161,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     updated[index + 1] = updated[index];
     updated[index] = temp;
     setCategories(updated);
-    handleSaveAll({ categories: updated });
+    handleSaveAll({ categories: updated }, 'Orden de categorías actualizado');
   };
 
   const moveShortcutUp = (index: number) => {
@@ -133,7 +171,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     updated[index - 1] = updated[index];
     updated[index] = temp;
     setShortcuts(updated);
-    handleSaveAll({ shortcuts: updated });
+    handleSaveAll({ shortcuts: updated }, 'Orden de atajos actualizado');
   };
 
   const moveShortcutDown = (index: number) => {
@@ -143,7 +181,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     updated[index + 1] = updated[index];
     updated[index] = temp;
     setShortcuts(updated);
-    handleSaveAll({ shortcuts: updated });
+    handleSaveAll({ shortcuts: updated }, 'Orden de atajos actualizado');
   };
 
   // Category Actions
@@ -164,14 +202,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setCategories(updated);
     setIsAddingCategory(false);
     setNewCatLabel('');
-    handleSaveAll({ categories: updated });
+    handleSaveAll({ categories: updated }, 'Categoría creada');
   };
 
   const handleUpdateCategory = (updatedCat: CustomCategory) => {
     const updated = categories.map((c) => (c.id === updatedCat.id ? updatedCat : c));
     setCategories(updated);
     setEditingCategory(null);
-    handleSaveAll({ categories: updated });
+    handleSaveAll({ categories: updated }, 'Categoría actualizada');
   };
 
   const handleDeleteCategory = (catId: string) => {
@@ -181,14 +219,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
     const updated = categories.filter((c) => c.id !== catId);
     setCategories(updated);
-    handleSaveAll({ categories: updated });
+    handleSaveAll({ categories: updated }, 'Categoría eliminada');
   };
 
   // Shortcut Actions
   const handleToggleShortcut = (scId: string) => {
     const updated = shortcuts.map((s) => (s.id === scId ? { ...s, enabled: !s.enabled } : s));
     setShortcuts(updated);
-    handleSaveAll({ shortcuts: updated });
+    handleSaveAll({ shortcuts: updated }, 'Atajo actualizado');
   };
 
   const handleSaveNewShortcut = (e: React.FormEvent) => {
@@ -215,20 +253,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setIsAddingShortcut(false);
     setNewScLabel('');
     setNewScTitle('');
-    handleSaveAll({ shortcuts: updated });
+    handleSaveAll({ shortcuts: updated }, 'Atajo rápido creado');
   };
 
   const handleUpdateShortcut = (updatedSc: QuickShortcut) => {
     const updated = shortcuts.map((s) => (s.id === updatedSc.id ? updatedSc : s));
     setShortcuts(updated);
     setEditingShortcut(null);
-    handleSaveAll({ shortcuts: updated });
+    handleSaveAll({ shortcuts: updated }, 'Atajo actualizado');
   };
 
   const handleDeleteShortcut = (scId: string) => {
     const updated = shortcuts.filter((s) => s.id !== scId);
     setShortcuts(updated);
-    handleSaveAll({ shortcuts: updated });
+    handleSaveAll({ shortcuts: updated }, 'Atajo eliminado');
   };
 
   const handleResetDefaults = () => {
@@ -351,32 +389,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
+        {/* Real-time Save Feedback Indicator */}
+        {savedFeedback && (
+          <div className="bg-emerald-50 text-emerald-800 border-b border-emerald-200/80 px-3 py-1.5 text-center text-xs font-bold flex items-center justify-center gap-1.5 animate-in fade-in duration-150">
+            <Check className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{savedFeedback}</span>
+          </div>
+        )}
+
         {/* Tab Content Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs box-border">
           {/* TAB 1: COLORES & FAMILIA */}
           {activeTab === 'colors' && (
             <div className="space-y-4">
               {/* Persona 1 */}
-              <div className="p-3 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2">
+              <div className="p-3.5 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-neutral-800 flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${user1Theme.indicator}`} />
-                    Nombre Persona 1
+                  <label className="font-bold text-neutral-900 text-xs flex items-center gap-1.5">
+                    <span className={`w-3 h-3 rounded-full ${user1Theme.indicator}`} />
+                    <span>Persona 1 (Tú)</span>
                   </label>
-                  <span className="text-[10px] text-neutral-500">{user1Theme.label}</span>
+                  <span className="text-[11px] font-bold text-neutral-600 px-2 py-0.5 rounded-md bg-white border border-neutral-200">
+                    {user1Theme.label}
+                  </span>
                 </div>
+
                 <input
                   type="text"
                   value={user1Name}
                   onChange={(e) => setUser1Name(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900 text-xs box-border"
+                  onBlur={() => handleSaveAll({}, 'Nombre guardado')}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-bold focus:outline-none focus:ring-2 focus:ring-neutral-900 text-xs box-border"
                   placeholder="Lucas"
                 />
+
                 <div>
-                  <span className="block text-[10px] font-semibold text-neutral-500 mb-1">
-                    Elige su color pastel:
+                  <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
+                    Toca un color para asignárselo al instante:
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                     {COLOR_KEYS.map((key) => {
                       const t = COLOR_THEMES[key];
                       const isSelected = user1Color === key;
@@ -384,12 +435,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           key={key}
                           type="button"
-                          onClick={() => setUser1Color(key)}
+                          onClick={() => handleSelectUser1Color(key)}
                           title={t.label}
-                          className={`w-6 h-6 rounded-full ${t.swatchBg} transition-transform ${
-                            isSelected ? 'ring-2 ring-neutral-900 ring-offset-2 scale-110' : 'hover:scale-105'
+                          className={`h-9 rounded-xl ${t.swatchBg} flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'ring-2 ring-neutral-950 ring-offset-2 scale-105 shadow-sm'
+                              : 'hover:scale-105 opacity-80 hover:opacity-100'
                           }`}
-                        />
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-white drop-shadow-sm" />}
+                        </button>
                       );
                     })}
                   </div>
@@ -397,26 +452,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* Persona 2 */}
-              <div className="p-3 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2">
+              <div className="p-3.5 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-neutral-800 flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${user2Theme.indicator}`} />
-                    Nombre Persona 2
+                  <label className="font-bold text-neutral-900 text-xs flex items-center gap-1.5">
+                    <span className={`w-3 h-3 rounded-full ${user2Theme.indicator}`} />
+                    <span>Persona 2 (Tu pareja)</span>
                   </label>
-                  <span className="text-[10px] text-neutral-500">{user2Theme.label}</span>
+                  <span className="text-[11px] font-bold text-neutral-600 px-2 py-0.5 rounded-md bg-white border border-neutral-200">
+                    {user2Theme.label}
+                  </span>
                 </div>
+
                 <input
                   type="text"
                   value={user2Name}
                   onChange={(e) => setUser2Name(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900 text-xs box-border"
+                  onBlur={() => handleSaveAll({}, 'Nombre guardado')}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-bold focus:outline-none focus:ring-2 focus:ring-neutral-900 text-xs box-border"
                   placeholder="Josefina"
                 />
+
                 <div>
-                  <span className="block text-[10px] font-semibold text-neutral-500 mb-1">
-                    Elige su color pastel:
+                  <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
+                    Toca un color para asignárselo al instante:
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                     {COLOR_KEYS.map((key) => {
                       const t = COLOR_THEMES[key];
                       const isSelected = user2Color === key;
@@ -424,12 +484,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           key={key}
                           type="button"
-                          onClick={() => setUser2Color(key)}
+                          onClick={() => handleSelectUser2Color(key)}
                           title={t.label}
-                          className={`w-6 h-6 rounded-full ${t.swatchBg} transition-transform ${
-                            isSelected ? 'ring-2 ring-neutral-900 ring-offset-2 scale-110' : 'hover:scale-105'
+                          className={`h-9 rounded-xl ${t.swatchBg} flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'ring-2 ring-neutral-950 ring-offset-2 scale-105 shadow-sm'
+                              : 'hover:scale-105 opacity-80 hover:opacity-100'
                           }`}
-                        />
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-white drop-shadow-sm" />}
+                        </button>
                       );
                     })}
                   </div>
@@ -437,19 +501,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* Ambos / Juntos */}
-              <div className="p-3 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2">
+              <div className="p-3.5 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-neutral-800 flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${bothTheme.indicator}`} />
-                    Planes Juntos / Familia
+                  <label className="font-bold text-neutral-900 text-xs flex items-center gap-1.5">
+                    <span className={`w-3 h-3 rounded-full ${bothTheme.indicator}`} />
+                    <span>Eventos Compartidos (Juntos)</span>
                   </label>
-                  <span className="text-[10px] text-neutral-500">{bothTheme.label}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-semibold text-neutral-500 mb-1">
-                    Elige el color para eventos compartidos:
+                  <span className="text-[11px] font-bold text-neutral-600 px-2 py-0.5 rounded-md bg-white border border-neutral-200">
+                    {bothTheme.label}
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                </div>
+
+                <div>
+                  <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
+                    Color para planes y familia:
+                  </span>
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                     {COLOR_KEYS.map((key) => {
                       const t = COLOR_THEMES[key];
                       const isSelected = bothColor === key;
@@ -457,12 +524,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           key={key}
                           type="button"
-                          onClick={() => setBothColor(key)}
+                          onClick={() => handleSelectBothColor(key)}
                           title={t.label}
-                          className={`w-6 h-6 rounded-full ${t.swatchBg} transition-transform ${
-                            isSelected ? 'ring-2 ring-neutral-900 ring-offset-2 scale-110' : 'hover:scale-105'
+                          className={`h-9 rounded-xl ${t.swatchBg} flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'ring-2 ring-neutral-950 ring-offset-2 scale-105 shadow-sm'
+                              : 'hover:scale-105 opacity-80 hover:opacity-100'
                           }`}
-                        />
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-white drop-shadow-sm" />}
+                        </button>
                       );
                     })}
                   </div>
@@ -470,8 +541,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* Peque / Hijo */}
-              <div className="p-3 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2">
-                <label className="font-bold text-neutral-800 flex items-center gap-1.5">
+              <div className="p-3.5 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 space-y-2">
+                <label className="font-bold text-neutral-900 flex items-center gap-1.5">
                   <Baby className="w-3.5 h-3.5 text-teal-600" />
                   Nombre de vuestro hijo/a
                 </label>
@@ -479,24 +550,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="text"
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900 text-xs box-border"
+                  onBlur={() => handleSaveAll({}, 'Nombre del peque guardado')}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-bold focus:outline-none focus:ring-2 focus:ring-neutral-900 text-xs box-border"
                   placeholder="Peque"
                 />
               </div>
 
               {/* Live Preview */}
-              <div className="pt-1">
+              <div className="pt-2">
                 <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
-                  Vista Previa de Tarjetas:
+                  Vista Previa en Vivo:
                 </span>
-                <div className="space-y-1.5">
-                  <div className={`p-2.5 rounded-xl border text-xs font-semibold ${user1Theme.cardBg}`}>
+                <div className="space-y-2">
+                  <div className={`p-3 rounded-2xl border text-xs font-semibold shadow-2xs ${user1Theme.cardBg}`}>
                     {user1Name} — Pádel y Deporte
                   </div>
-                  <div className={`p-2.5 rounded-xl border text-xs font-semibold ${user2Theme.cardBg}`}>
+                  <div className={`p-3 rounded-2xl border text-xs font-semibold shadow-2xs ${user2Theme.cardBg}`}>
                     {user2Name} — Reunión &amp; Yoga
                   </div>
-                  <div className={`p-2.5 rounded-xl border text-xs font-semibold ${bothTheme.cardBg}`}>
+                  <div className={`p-3 rounded-2xl border text-xs font-semibold shadow-2xs ${bothTheme.cardBg}`}>
                     Juntos — Cena Romántica &amp; Rutina de {childName}
                   </div>
                 </div>
@@ -513,7 +585,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     Categorías ({categories.length})
                   </span>
                   <span className="text-[10px] text-neutral-500">
-                    Usa las flechas ⬆️ ⬇️ para definir el orden en la app
+                    Usa las flechas ⬆️ ⬇️ para definir el orden
                   </span>
                 </div>
                 {!isAddingCategory && !editingCategory && (
@@ -570,16 +642,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {/* Color Selector */}
                   <div>
                     <label className="block text-[10px] font-semibold text-neutral-600 mb-1">Color Pastel</label>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="grid grid-cols-8 gap-1.5">
                       {COLOR_KEYS.map((k) => (
                         <button
                           key={k}
                           type="button"
                           onClick={() => setNewCatColor(k)}
-                          className={`w-5 h-5 rounded-full ${COLOR_THEMES[k].swatchBg} ${
-                            newCatColor === k ? 'ring-2 ring-neutral-900 ring-offset-1 scale-110' : ''
+                          className={`h-7 rounded-lg ${COLOR_THEMES[k].swatchBg} flex items-center justify-center ${
+                            newCatColor === k ? 'ring-2 ring-neutral-900 ring-offset-1 scale-105' : ''
                           }`}
-                        />
+                        >
+                          {newCatColor === k && <Check className="w-3 h-3 text-white" />}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -640,16 +714,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {/* Color Selector */}
                   <div>
                     <label className="block text-[10px] font-semibold text-neutral-600 mb-1">Color Pastel</label>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="grid grid-cols-8 gap-1.5">
                       {COLOR_KEYS.map((k) => (
                         <button
                           key={k}
                           type="button"
                           onClick={() => setEditingCategory({ ...editingCategory, colorTheme: k })}
-                          className={`w-5 h-5 rounded-full ${COLOR_THEMES[k].swatchBg} ${
-                            editingCategory.colorTheme === k ? 'ring-2 ring-neutral-900 ring-offset-1 scale-110' : ''
+                          className={`h-7 rounded-lg ${COLOR_THEMES[k].swatchBg} flex items-center justify-center ${
+                            editingCategory.colorTheme === k ? 'ring-2 ring-neutral-900 ring-offset-1 scale-105' : ''
                           }`}
-                        />
+                        >
+                          {editingCategory.colorTheme === k && <Check className="w-3 h-3 text-white" />}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -1141,11 +1217,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <button
             type="button"
-            onClick={() => handleSaveAll()}
+            onClick={() => {
+              handleSaveAll({}, 'Ajustes guardados');
+              onClose();
+            }}
             className="flex-1 py-2.5 px-4 rounded-xl bg-neutral-900 text-white font-bold text-xs hover:bg-neutral-800 transition flex items-center justify-center gap-1.5 shadow-sm"
           >
-            {isSaved ? <Check className="w-4 h-4 text-emerald-400" /> : null}
-            <span>{isSaved ? '¡Guardado Correctamente!' : 'Guardar Cambios'}</span>
+            <span>Guardar y Cerrar</span>
           </button>
         </div>
       </div>
