@@ -1,0 +1,8 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /events/{eventId} {
+      allow read, write: if true; // Para uso privado de la pareja (o restringir por auth si se añade login en el futuro)
+    }
+  }
+}
