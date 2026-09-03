@@ -74,12 +74,11 @@ export function getWeekDays(anchorDate: Date = new Date()) {
   });
 }
 
-// Generate continuous dates for the agenda view (e.g. from 1 day before to 14 days ahead)
+// Generate continuous dates for the agenda view (starts from anchorDate / today)
 export function getAgendaDatesWindow(anchorDate: Date = new Date(), daysCount: number = 14): string[] {
   const dates: string[] = [];
-  const start = addDays(anchorDate, -1);
   for (let i = 0; i < daysCount; i++) {
-    dates.push(toDateString(addDays(start, i)));
+    dates.push(toDateString(addDays(anchorDate, i)));
   }
   return dates;
 }

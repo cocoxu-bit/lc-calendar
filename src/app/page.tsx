@@ -108,11 +108,13 @@ export default function Home() {
       return getWeekDatesWindow(currentWeekAnchor);
     }
 
-    // Default 'agenda' view
-    const baseWindow = getAgendaDatesWindow(currentWeekAnchor, 14);
+    // Default 'agenda' view: starts strictly from today
+    const baseWindow = getAgendaDatesWindow(new Date(), 14);
     const dateSet = new Set(baseWindow);
     filteredEvents.forEach((e) => {
-      if (e.date) dateSet.add(e.date);
+      if (e.date && e.date >= todayStr) {
+        dateSet.add(e.date);
+      }
     });
     return Array.from(dateSet).sort();
   }, [viewMode, selectedDate, todayStr, currentWeekAnchor, filteredEvents]);
