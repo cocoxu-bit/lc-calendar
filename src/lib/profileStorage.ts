@@ -22,6 +22,22 @@ export function getStoredProfile(): CoupleProfile {
       shortcuts: Array.isArray(parsed.shortcuts) && parsed.shortcuts.length > 0
         ? parsed.shortcuts
         : DEFAULT_SHORTCUTS,
+      notifications: parsed.notifications
+        ? {
+            enabled: Boolean(parsed.notifications.enabled),
+            leadTimeMinutes: typeof parsed.notifications.leadTimeMinutes === 'number'
+              ? parsed.notifications.leadTimeMinutes
+              : DEFAULT_COUPLE.notifications!.leadTimeMinutes,
+            notifyNightShift: parsed.notifications.notifyNightShift !== undefined
+              ? Boolean(parsed.notifications.notifyNightShift)
+              : DEFAULT_COUPLE.notifications!.notifyNightShift,
+            nightShiftReminderTime: parsed.notifications.nightShiftReminderTime || DEFAULT_COUPLE.notifications!.nightShiftReminderTime,
+            filterByOwner: parsed.notifications.filterByOwner || DEFAULT_COUPLE.notifications!.filterByOwner,
+            soundEnabled: parsed.notifications.soundEnabled !== undefined
+              ? Boolean(parsed.notifications.soundEnabled)
+              : DEFAULT_COUPLE.notifications!.soundEnabled,
+          }
+        : DEFAULT_COUPLE.notifications,
     };
   } catch {
     return DEFAULT_COUPLE;

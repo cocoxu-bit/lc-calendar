@@ -48,6 +48,24 @@ export interface CalendarEvent {
   createdAt: number;
 }
 
+export interface NotificationSettings {
+  enabled: boolean;
+  leadTimeMinutes: number; // 0, 5, 10, 15, 30, 60
+  notifyNightShift: boolean; // Notificación especial de turno nocturno
+  nightShiftReminderTime: string; // '21:00'
+  filterByOwner: 'all' | 'user_1' | 'user_2'; // Recibir avisos de todos o solo de Lucas o Josefina
+  soundEnabled: boolean;
+}
+
+export const DEFAULT_NOTIFICATIONS: NotificationSettings = {
+  enabled: false,
+  leadTimeMinutes: 15,
+  notifyNightShift: true,
+  nightShiftReminderTime: '21:00',
+  filterByOwner: 'all',
+  soundEnabled: true,
+};
+
 export interface CoupleProfile {
   user1Name: string;
   user1Color: ColorThemeKey;
@@ -57,6 +75,7 @@ export interface CoupleProfile {
   childName?: string;
   categories: CustomCategory[];
   shortcuts: QuickShortcut[];
+  notifications?: NotificationSettings;
 }
 
 export const DEFAULT_CATEGORIES: CustomCategory[] = [
@@ -203,4 +222,5 @@ export const DEFAULT_COUPLE: CoupleProfile = {
   childName: 'Peque',
   categories: DEFAULT_CATEGORIES,
   shortcuts: DEFAULT_SHORTCUTS,
+  notifications: DEFAULT_NOTIFICATIONS,
 };

@@ -33,6 +33,7 @@ import {
   saveStoredProfile,
   subscribeToProfile,
 } from '@/lib/profileStorage';
+import { checkAndTriggerEventReminders } from '@/lib/notificationService';
 
 export default function Home() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -66,6 +67,17 @@ export default function Home() {
     });
     return () => unsub();
   }, []);
+
+  // Periodic background check for browser event reminders & night shift alerts
+  useEffect(() => {
+    checkAndTriggerEventReminders(events, profile);
+
+    const intervalId = setInterval(() => {
+      checkAndTriggerEventReminders(events, profile);
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [events, profile]);
 
   // Filtered events
   const filteredEvents = useMemo(() => {
