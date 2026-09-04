@@ -9,6 +9,7 @@ import { HorizontalCalendarView } from '@/components/HorizontalCalendarView';
 import { EventSheet } from '@/components/EventSheet';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { SettingsModal } from '@/components/SettingsModal';
+import { NotificationToast } from '@/components/NotificationToast';
 import {
   CalendarEvent,
   CoupleProfile,
@@ -205,6 +206,9 @@ export default function Home() {
     <div className="min-h-screen bg-neutral-100 flex justify-center selection:bg-neutral-900 selection:text-white overflow-x-hidden">
       {/* Mobile Frame Container (Strictly bounded, zero accidental horizontal scroll) */}
       <main className="w-full max-w-md min-h-screen bg-neutral-50 text-neutral-900 shadow-2xl relative flex flex-col font-sans border-x border-neutral-200/60 overflow-x-hidden box-border">
+        {/* Dynamic In-App Notification Toast */}
+        <NotificationToast />
+
         {/* Header with week scrubber */}
         <Header
           currentWeekAnchor={currentWeekAnchor}

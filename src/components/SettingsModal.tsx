@@ -38,10 +38,11 @@ import {
 } from 'lucide-react';
 import { getInitialSampleEvents } from '@/lib/eventsService';
 import {
-  isNotificationSupported,
   getNotificationPermission,
   requestNotificationPermission,
   sendTestNotification,
+  isIOS,
+  isStandalonePWA,
 } from '@/lib/notificationService';
 
 interface SettingsModalProps {
@@ -78,7 +79,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission>('default');
   const [testResultMsg, setTestResultMsg] = useState<{ text: string; isError?: boolean } | null>(null);
   const [isTestingNotification, setIsTestingNotification] = useState(false);
-  const isSupported = isNotificationSupported();
 
   // Categories state
   const [categories, setCategories] = useState<CustomCategory[]>(
@@ -690,37 +690,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </label>
                 </div>
 
-                {/* Permission Status Pill */}
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-neutral-200/60">
-                  <span className="text-neutral-600 font-medium">Permiso en este dispositivo:</span>
-                  {browserPermission === 'granted' ? (
+                {/* Visual + System alerts status */}
+                <div className="space-y-2 pt-1 border-t border-neutral-200/60">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-neutral-600 font-medium">Avisos visuales y sonido en pantalla:</span>
                     <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       <Check className="w-3 h-3" />
-                      Permitidas
+                      Activos 100%
                     </span>
-                  ) : browserPermission === 'denied' ? (
-                    <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                      <AlertTriangle className="w-3 h-3" />
-                      Bloqueadas
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                      Sin solicitar
-                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-neutral-600 font-medium">Alertas del sistema (con app cerrada):</span>
+                    {browserPermission === 'granted' ? (
+                      <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <Check className="w-3 h-3" />
+                        Concedidas
+                      </span>
+                    ) : browserPermission === 'denied' ? (
+                      <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                        <AlertTriangle className="w-3 h-3" />
+                        Bloqueadas
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        Pendiente
+                      </span>
+                    )}
+                  </div>
+
+                  {isIOS() && !isStandalonePWA() && (
+                    <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200/90 text-sky-950 text-[11px] leading-relaxed space-y-1">
+                      <div className="font-bold flex items-center gap-1.5 text-sky-900">
+                        <span>📲 Aviso importante para iPhone:</span>
+                      </div>
+                      <p>
+                        Apple (iOS) no permite alertas con la pantalla bloqueada dentro de pestañas normales de Safari. Para recibirlas con el móvil bloqueado: pulsa el botón <strong>Compartir (📤)</strong> abajo en Safari y pulsa <strong>&quot;Añadir a pantalla de inicio&quot;</strong>.
+                      </p>
+                    </div>
+                  )}
+
+                  {browserPermission === 'denied' && (
+                    <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed">
+                      El navegador tiene las notificaciones bloqueadas. Si quieres alertas del sistema, haz clic en el icono del candado en la barra de URL para conceder permisos.
+                    </div>
                   )}
                 </div>
-
-                {browserPermission === 'denied' && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed">
-                    Las notificaciones están bloqueadas en la configuración de este navegador. Haz clic en el icono del candado en la barra de URL para conceder permisos.
-                  </div>
-                )}
-
-                {!isSupported && (
-                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-relaxed">
-                    Este navegador no soporta la API de Notificaciones del sistema.
-                  </div>
-                )}
               </div>
 
               {/* Botón para Probar Notificaciones (Requisito expreso del usuario) */}

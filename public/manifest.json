@@ -1,0 +1,17 @@
+{
+  "name": "L&C Calendar",
+  "short_name": "L&C",
+  "description": "Calendario minimalista y visual para parejas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#171717",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

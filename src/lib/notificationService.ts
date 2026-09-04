@@ -4,22 +4,59 @@ import { CalendarEvent, CoupleProfile } from '@/types/calendar';
 import { toDateString } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 
+export function isIOS(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
+export function isStandalonePWA(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  );
+}
+
 export function isNotificationSupported(): boolean {
-  return typeof window !== 'undefined' && 'Notification' in window;
+  if (typeof window === 'undefined') return false;
+  return 'Notification' in window || ('serviceWorker' in navigator && 'PushManager' in window);
 }
 
 export function getNotificationPermission(): NotificationPermission {
-  if (!isNotificationSupported()) return 'denied';
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
   return Notification.permission;
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
-  if (!isNotificationSupported()) return 'denied';
+  if (typeof window === 'undefined') return 'denied';
+
+  // 1. Direct window.Notification
+  if ('Notification' in window && typeof Notification.requestPermission === 'function') {
+    try {
+      const permission = await Notification.requestPermission();
+      return permission;
+    } catch {
+      return Notification.permission;
+    }
+  }
+
+  return 'denied';
+}
+
+// Register service worker if supported
+export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
   try {
-    const permission = await Notification.requestPermission();
-    return permission;
+    let reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) {
+      reg = await navigator.serviceWorker.register('/sw.js');
+    }
+    return reg;
   } catch {
-    return Notification.permission;
+    return null;
   }
 }
 
@@ -63,90 +100,157 @@ export function playNotificationSound() {
   }
 }
 
-export function sendBrowserNotification(
-  title: string,
-  options?: NotificationOptions,
-  playSound: boolean = true
-): boolean {
-  if (!isNotificationSupported()) return false;
-  if (Notification.permission !== 'granted') return false;
-
-  try {
-    if (playSound) {
-      playNotificationSound();
-    }
-
-    const notif = new Notification(title, {
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      ...options,
-    });
-
-    notif.onclick = () => {
-      window.focus();
-      notif.close();
-    };
-
-    return true;
-  } catch {
-    return false;
-  }
+// Always triggers in-app toast for visual clarity
+export function triggerInAppToast(title: string, body: string, isNight: boolean = false) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('lc_in_app_notification', {
+      detail: { title, body, isNight },
+    })
+  );
 }
 
-// Test notification button handler
+// Send dual notification: In-App visual banner + Native system notification
+export async function sendDualNotification(
+  title: string,
+  options?: NotificationOptions,
+  playSound: boolean = true,
+  isNight: boolean = false
+): Promise<boolean> {
+  // 1. Play sound
+  if (playSound) {
+    playNotificationSound();
+  }
+
+  // 2. Always show in-app banner
+  triggerInAppToast(title, options?.body || '', isNight);
+
+  // 3. Try native system notification via Service Worker first
+  try {
+    const reg = await getServiceWorkerRegistration();
+    if (reg && 'showNotification' in reg && Notification.permission === 'granted') {
+      await reg.showNotification(title, {
+        icon: '/icon.svg',
+        badge: '/icon.svg',
+        ...options,
+      });
+      return true;
+    }
+  } catch {
+    // Fall back to window.Notification
+  }
+
+  // 4. Try window.Notification constructor
+  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+    try {
+      const notif = new Notification(title, {
+        icon: '/icon.svg',
+        badge: '/icon.svg',
+        ...options,
+      });
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+      return true;
+    } catch {
+      // In-app was already displayed
+    }
+  }
+
+  return false;
+}
+
+// Test notification button handler with detailed user guidance
 export async function sendTestNotification(profile: CoupleProfile): Promise<{
   success: boolean;
   message: string;
+  isSystemPermissionGranted: boolean;
 }> {
-  if (!isNotificationSupported()) {
-    return {
-      success: false,
-      message: 'Tu navegador actual no tiene soporte para la API de Notificaciones del sistema.',
-    };
-  }
-
-  let permission = Notification.permission;
-  if (permission !== 'granted') {
-    permission = await requestNotificationPermission();
-  }
-
-  if (permission !== 'granted') {
-    return {
-      success: false,
-      message:
-        'Permiso de notificaciones denegado o no concedido. Habilita los permisos de notificaciones en los ajustes de tu navegador.',
-    };
-  }
-
   const child = profile.childName || 'el peque';
-  const sent = sendBrowserNotification(
-    '🔔 L&C Calendar — Notificación de prueba',
-    {
-      body: `¡Todo listo! Os avisaremos con antelación de vuestros eventos y de quién se queda con ${child} por las noches.`,
-      tag: 'test-notification',
-    },
-    profile.notifications?.soundEnabled ?? true
-  );
+  const testTitle = '🔔 L&C Calendar — ¡Aviso de prueba!';
+  const testBody = `¡Aviso recibido! Os recordaremos los eventos y turnos con ${child}.`;
 
-  if (sent) {
+  // Always play chime sound and trigger in-app toast banner
+  const sound = profile.notifications?.soundEnabled ?? true;
+  if (sound) {
+    playNotificationSound();
+  }
+  triggerInAppToast(testTitle, testBody, false);
+
+  // Check if system notifications are possible
+  let systemGranted = false;
+  const supported = isNotificationSupported();
+
+  if (supported) {
+    let perm = getNotificationPermission();
+    if (perm !== 'granted') {
+      perm = await requestNotificationPermission();
+    }
+
+    if (perm === 'granted') {
+      systemGranted = true;
+      // Try dispatching system alert
+      try {
+        const reg = await getServiceWorkerRegistration();
+        if (reg && 'showNotification' in reg) {
+          await reg.showNotification(testTitle, {
+            body: testBody,
+            icon: '/icon.svg',
+            tag: 'test-notif',
+          });
+        } else if ('Notification' in window) {
+          new Notification(testTitle, {
+            body: testBody,
+            icon: '/icon.svg',
+            tag: 'test-notif',
+          });
+        }
+      } catch {
+        // Fall back gracefully
+      }
+    }
+  }
+
+  // Determine friendly message for the couple
+  if (systemGranted) {
     return {
       success: true,
-      message: '¡Notificación de prueba enviada con éxito!',
-    };
-  } else {
-    return {
-      success: false,
-      message: 'No se pudo emitir la notificación. Comprueba que el navegador permite avisos en esta pestaña.',
+      message: '¡Aviso emitido con éxito tanto en pantalla como en el sistema!',
+      isSystemPermissionGranted: true,
     };
   }
+
+  if (isIOS() && !isStandalonePWA()) {
+    return {
+      success: true,
+      message:
+        '¡Aviso visual y sonoro emitido! 💡 En iPhone, para recibir avisos con el móvil bloqueado, pulsa Compartir (📤) en Safari y "Añadir a pantalla de inicio".',
+      isSystemPermissionGranted: false,
+    };
+  }
+
+  if (supported && getNotificationPermission() === 'denied') {
+    return {
+      success: true,
+      message:
+        '¡Aviso visual y sonoro emitido! Las alertas del sistema están desactivadas en los ajustes de tu navegador.',
+      isSystemPermissionGranted: false,
+    };
+  }
+
+  return {
+    success: true,
+    message: '¡Aviso visual y sonoro emitido correctamente en la app!',
+    isSystemPermissionGranted: false,
+  };
 }
 
-// Check upcoming events and trigger notifications
+// Periodic check for upcoming events
 export function checkAndTriggerEventReminders(
   events: CalendarEvent[],
   profile: CoupleProfile
 ) {
-  if (!isNotificationSupported() || Notification.permission !== 'granted') return;
   const notifConfig = profile.notifications;
   if (!notifConfig || !notifConfig.enabled) return;
 
@@ -157,11 +261,10 @@ export function checkAndTriggerEventReminders(
 
   const leadMinutes = notifConfig.leadTimeMinutes || 15;
   const leadMs = leadMinutes * 60 * 1000;
-  const toleranceMs = 3 * 60 * 1000; // 3 min window
+  const toleranceMs = 3 * 60 * 1000;
 
   // 1. Regular Event Reminders
   events.forEach((event) => {
-    // Check owner filter
     if (notifConfig.filterByOwner === 'user_1' && event.owner === 'user_2') return;
     if (notifConfig.filterByOwner === 'user_2' && event.owner === 'user_1') return;
 
@@ -173,7 +276,6 @@ export function checkAndTriggerEventReminders(
     if (isNaN(eventMs)) return;
 
     const diffMs = eventMs - nowMs;
-    // If event is starting in approximately leadMinutes
     if (diffMs <= leadMs && diffMs >= -toleranceMs) {
       const storageKey = `lc_notif_${event.id || event.title}_${event.date}_${leadMinutes}`;
       if (typeof window !== 'undefined' && !sessionStorage.getItem(storageKey)) {
@@ -191,13 +293,14 @@ export function checkAndTriggerEventReminders(
             ? '¡Comienza ahora!'
             : `Empieza en ${leadMinutes} min (${event.startTime})`;
 
-        sendBrowserNotification(
+        sendDualNotification(
           `📅 ${event.title}`,
           {
             body: `${leadText} · Asignado a: ${ownerLabel}`,
             tag: `event-${event.id || event.title}`,
           },
-          notifConfig.soundEnabled
+          notifConfig.soundEnabled,
+          false
         );
       }
     }
@@ -209,7 +312,6 @@ export function checkAndTriggerEventReminders(
     if (currentHours >= reminderTime) {
       const nightKey = `lc_notif_night_${todayStr}`;
       if (typeof window !== 'undefined' && !sessionStorage.getItem(nightKey)) {
-        // Find night event for today
         const nightEvent = events.find(
           (e) =>
             e.date === todayStr &&
@@ -227,13 +329,14 @@ export function checkAndTriggerEventReminders(
 
           const child = profile.childName || 'el peque';
 
-          sendBrowserNotification(
+          sendDualNotification(
             `🌙 Turno de Noche con ${child}`,
             {
               body: `Esta noche le toca quedarse con ${child} a ${who}. ¡Que descanséis!`,
               tag: `night-shift-${todayStr}`,
             },
-            notifConfig.soundEnabled
+            notifConfig.soundEnabled,
+            true
           );
         }
       }
