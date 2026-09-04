@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="px-3 sm:px-4 pt-3 pb-2 flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           {/* 3D App Logo */}
-          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-neutral-200/80 shrink-0 bg-slate-900 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-2xs border border-neutral-200/80 shrink-0 bg-white flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.png"

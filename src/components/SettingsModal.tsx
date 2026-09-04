@@ -388,7 +388,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Top Header */}
         <div className="px-4 sm:px-5 pt-4 pb-2.5 flex items-center justify-between border-b border-neutral-100 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-xs border border-neutral-200/80 shrink-0 bg-slate-900 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-2xs border border-neutral-200/80 shrink-0 bg-white flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"

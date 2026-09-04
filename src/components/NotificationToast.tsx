@@ -47,7 +47,7 @@ export const NotificationToast: React.FC = () => {
   return (
     <div className="fixed top-3 inset-x-3 z-50 max-w-md mx-auto animate-in slide-in-from-top-4 fade-in duration-200">
       <div className="bg-neutral-900/95 backdrop-blur-md text-white p-3.5 rounded-2xl shadow-2xl border border-white/10 flex items-start gap-3">
-        <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-white/20 shrink-0 mt-0.5 bg-slate-900">
+        <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-white/20 shrink-0 mt-0.5 bg-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.png"
