@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Moon, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export interface InAppToastPayload {
   title: string;
@@ -47,11 +47,17 @@ export const NotificationToast: React.FC = () => {
   return (
     <div className="fixed top-3 inset-x-3 z-50 max-w-md mx-auto animate-in slide-in-from-top-4 fade-in duration-200">
       <div className="bg-neutral-900/95 backdrop-blur-md text-white p-3.5 rounded-2xl shadow-2xl border border-white/10 flex items-start gap-3">
-        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
-          {toast.isNight ? (
-            <Moon className="w-4 h-4 text-amber-300" />
-          ) : (
-            <Bell className="w-4 h-4 text-sky-400" />
+        <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-white/20 shrink-0 mt-0.5 bg-slate-900">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="L&C Calendar"
+            className="w-full h-full object-cover"
+          />
+          {toast.isNight && (
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[9px] shadow-sm font-bold">
+              🌙
+            </div>
           )}
         </div>
 

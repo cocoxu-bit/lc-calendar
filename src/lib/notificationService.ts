@@ -130,8 +130,8 @@ export async function sendDualNotification(
     const reg = await getServiceWorkerRegistration();
     if (reg && 'showNotification' in reg && Notification.permission === 'granted') {
       await reg.showNotification(title, {
-        icon: '/icon.svg',
-        badge: '/icon.svg',
+        icon: '/logo.png',
+        badge: '/logo.png',
         ...options,
       });
       return true;
@@ -144,8 +144,8 @@ export async function sendDualNotification(
   if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
     try {
       const notif = new Notification(title, {
-        icon: '/icon.svg',
-        badge: '/icon.svg',
+        icon: '/logo.png',
+        badge: '/logo.png',
         ...options,
       });
       notif.onclick = () => {
@@ -196,13 +196,13 @@ export async function sendTestNotification(profile: CoupleProfile): Promise<{
         if (reg && 'showNotification' in reg) {
           await reg.showNotification(testTitle, {
             body: testBody,
-            icon: '/icon.svg',
+            icon: '/logo.png',
             tag: 'test-notif',
           });
         } else if ('Notification' in window) {
           new Notification(testTitle, {
             body: testBody,
-            icon: '/icon.svg',
+            icon: '/logo.png',
             tag: 'test-notif',
           });
         }

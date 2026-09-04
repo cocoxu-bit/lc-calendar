@@ -387,15 +387,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-neutral-200/80 z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 box-border">
         {/* Top Header */}
         <div className="px-4 sm:px-5 pt-4 pb-2.5 flex items-center justify-between border-b border-neutral-100 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-neutral-900 text-white flex items-center justify-center">
-              <Palette className="w-4 h-4" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-xs border border-neutral-200/80 shrink-0 bg-slate-900 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="L&C Calendar"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight">
-                Personalización Total
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 block leading-none">
+                L&amp;C Calendar
+              </span>
+              <h2 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight mt-0.5">
+                Ajustes &amp; Personalización
               </h2>
-              <p className="text-[11px] text-neutral-500">Colores, avisos, categorías y orden</p>
             </div>
           </div>
 

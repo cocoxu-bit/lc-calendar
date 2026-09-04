@@ -47,23 +47,32 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Bar: Brand, Month & Controls */}
       <div className="px-3 sm:px-4 pt-3 pb-2 flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-neutral-900 to-neutral-700 text-white flex items-center justify-center font-bold text-xs tracking-wider shadow-sm shrink-0">
-            L&amp;C
+          {/* 3D App Logo */}
+          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-neutral-200/80 shrink-0 bg-slate-900 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="L&C Calendar"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight truncate">
-                {monthTitle}
-              </h1>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 block leading-none">
+                L&amp;C Calendar
+              </span>
+              <span className="text-[10px] text-neutral-400 font-medium truncate">
+                · {profile.user1Name} &amp; {profile.user2Name}
+              </span>
               {isLiveFirestore ? (
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-100 shrink-0" title="Sincronizado con Firebase Firestore" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100 shrink-0" title="Sincronizado con Firebase Firestore" />
               ) : (
-                <span className="inline-block w-2 h-2 rounded-full bg-amber-400 ring-2 ring-amber-100 shrink-0" title="Modo Local Activo" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 ring-2 ring-amber-100 shrink-0" title="Modo Local Activo" />
               )}
             </div>
-            <p className="text-[11px] text-neutral-500 font-medium leading-none truncate">
-              {profile.user1Name} &amp; {profile.user2Name}
-            </p>
+            <h1 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight truncate">
+              {monthTitle}
+            </h1>
           </div>
         </div>
 
