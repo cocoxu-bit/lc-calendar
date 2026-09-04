@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 block leading-none">
+              <span className="text-[11px] font-serif font-bold tracking-wide text-emerald-800 block leading-none">
                 L&amp;C Calendar
               </span>
               <span className="text-[10px] text-neutral-400 font-medium truncate">

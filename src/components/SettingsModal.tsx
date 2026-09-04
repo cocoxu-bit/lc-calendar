@@ -397,7 +397,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 block leading-none">
+              <span className="text-[11px] font-serif font-bold tracking-wide text-emerald-800 block leading-none">
                 L&amp;C Calendar
               </span>
               <h2 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight mt-0.5">
