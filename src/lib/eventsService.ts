@@ -23,131 +23,9 @@ export function formatDateKey(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-// Generate realistic initial couple & baby routines centered around today
+// Initial events for empty state (empty by default for real usage)
 export function getInitialSampleEvents(): CalendarEvent[] {
-  const now = new Date();
-
-  const d0 = new Date(now);
-  const d1 = new Date(now);
-  d1.setDate(d1.getDate() + 1);
-  const d2 = new Date(now);
-  d2.setDate(d2.getDate() + 2);
-  const d3 = new Date(now);
-  d3.setDate(d3.getDate() + 3);
-
-  const date0 = formatDateKey(d0);
-  const date1 = formatDateKey(d1);
-  const date2 = formatDateKey(d2);
-  const date3 = formatDateKey(d3);
-
-  return [
-    {
-      id: 'demo-1',
-      title: 'Desayuno & Biberón de la mañana 🍼',
-      date: date0,
-      startTime: '08:00',
-      endTime: '08:45',
-      isAllDay: false,
-      owner: 'user_2', // Josefina
-      category: 'bebe',
-      babyTaskType: 'comida',
-      createdAt: Date.now() - 10000,
-    },
-    {
-      id: 'demo-2',
-      title: 'Pádel / Running con amigos 🎾',
-      date: date0,
-      startTime: '18:00',
-      endTime: '19:15',
-      isAllDay: false,
-      owner: 'user_1', // Lucas
-      category: 'deporte',
-      createdAt: Date.now() - 9000,
-    },
-    {
-      id: 'demo-3',
-      title: 'Turno de noche con el peque 🌙',
-      date: date0,
-      startTime: '23:30',
-      endTime: '07:30',
-      isAllDay: false,
-      owner: 'user_1', // Lucas se queda esta noche
-      category: 'bebe',
-      babyTaskType: 'noche',
-      createdAt: Date.now() - 8000,
-    },
-    {
-      id: 'demo-4',
-      title: 'Llevar a la guardería 🎒',
-      date: date1,
-      startTime: '09:00',
-      endTime: '09:30',
-      isAllDay: false,
-      owner: 'user_1', // Lucas
-      category: 'bebe',
-      babyTaskType: 'guarderia',
-      createdAt: Date.now() - 7000,
-    },
-    {
-      id: 'demo-5',
-      title: 'Puré de verduras & Comida del peque 🥣',
-      date: date1,
-      startTime: '13:00',
-      endTime: '14:00',
-      isAllDay: false,
-      owner: 'user_2', // Josefina
-      category: 'bebe',
-      babyTaskType: 'comida',
-      createdAt: Date.now() - 6000,
-    },
-    {
-      id: 'demo-6',
-      title: 'Baño y rutina relajante antes de dormir 🛁',
-      date: date1,
-      startTime: '20:00',
-      endTime: '20:45',
-      isAllDay: false,
-      owner: 'both', // Juntos
-      category: 'bebe',
-      babyTaskType: 'bano',
-      createdAt: Date.now() - 5500,
-    },
-    {
-      id: 'demo-7',
-      title: 'Turno de noche con el peque 🌙',
-      date: date1,
-      startTime: '23:30',
-      endTime: '07:30',
-      isAllDay: false,
-      owner: 'user_2', // Josefina se queda la noche siguiente
-      category: 'bebe',
-      babyTaskType: 'noche',
-      createdAt: Date.now() - 5000,
-    },
-    {
-      id: 'demo-8',
-      title: 'Revisión 6 meses Pediatra 🩺',
-      date: date2,
-      startTime: '11:00',
-      endTime: '12:00',
-      isAllDay: false,
-      owner: 'both',
-      category: 'bebe',
-      babyTaskType: 'pediatra',
-      createdAt: Date.now() - 4000,
-    },
-    {
-      id: 'demo-9',
-      title: 'Paseo en familia por el parque 🌳',
-      date: date3,
-      startTime: '11:30',
-      endTime: '13:30',
-      isAllDay: false,
-      owner: 'both',
-      category: 'ocio',
-      createdAt: Date.now() - 3000,
-    },
-  ];
+  return [];
 }
 
 // LocalStorage helpers
@@ -155,12 +33,17 @@ function getLocalEvents(): CalendarEvent[] {
   if (typeof window === 'undefined') return [];
   const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (!stored) {
-    const initial = getInitialSampleEvents();
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initial));
-    return initial;
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([]));
+    return [];
   }
   try {
-    return JSON.parse(stored);
+    const list: CalendarEvent[] = JSON.parse(stored);
+    // Automatically purge any sample/demo events so user starts clean
+    const cleaned = list.filter((e) => !e.id?.startsWith('demo-'));
+    if (cleaned.length !== list.length) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch {
     return [];
   }
@@ -170,6 +53,14 @@ function saveLocalEvents(events: CalendarEvent[]) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(events));
   window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT));
+}
+
+// Clear all events completely
+export function clearAllEvents(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([]));
+    window.dispatchEvent(new CustomEvent(LOCAL_CHANGE_EVENT));
+  }
 }
 
 // Subscribe to events (realtime Firestore with fallback to LocalStorage)

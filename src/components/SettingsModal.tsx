@@ -36,7 +36,7 @@ import {
   Send,
   AlertTriangle,
 } from 'lucide-react';
-import { getInitialSampleEvents } from '@/lib/eventsService';
+import { clearAllEvents } from '@/lib/eventsService';
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -364,10 +364,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setShortcuts(DEFAULT_SHORTCUTS);
       onSaveProfile(resetProfile);
 
-      const initial = getInitialSampleEvents();
-      localStorage.setItem('lc_calendar_events_local_v2', JSON.stringify(initial));
-      window.dispatchEvent(new CustomEvent('lc_calendar_local_change'));
+      clearAllEvents();
       onClose();
+    }
+  };
+
+  const handleClearAllEvents = () => {
+    if (confirm('¿Seguro que quieres borrar todos los eventos del calendario? Se vaciará por completo para empezar desde cero.')) {
+      clearAllEvents();
+      showSavedFeedback('Calendario vaciado por completo');
     }
   };
 
@@ -1546,7 +1551,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </p>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 space-y-2">
+                <button
+                  type="button"
+                  onClick={handleClearAllEvents}
+                  className="w-full py-2.5 px-3 rounded-xl border border-neutral-200 text-neutral-700 bg-neutral-50 hover:bg-neutral-100 hover:text-rose-600 transition flex items-center justify-center gap-1.5 text-xs font-semibold"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Vaciar todos los eventos del calendario</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleResetDefaults}
